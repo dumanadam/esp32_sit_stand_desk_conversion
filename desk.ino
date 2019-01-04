@@ -4,16 +4,22 @@
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include <EEPROM.h>
+#include <ESPmDNS.h>
 #include "credentials.h"
 
 /* const char* brokerUser = "gengisville";
  *  const char* brokerPass = "gengisville";
  */
+#define EEPROM_SIZE 32
+
+ 
 const char* broker = "192.168.20.200";
-const char* outTopic = "/Desk/out";
+/*const char* outTopic = "/Desk/out";*/
 const char* outStatus = "/Desk/status";
 const char* inTopic = "/Desk/cmd";
-char* deskStatus = "3";
+char deskStatus[2] = "8";
+char deskSet = 'x';
 
 const byte buttonPinUp = 4; 
 const byte buttonPinDown = 15; 
@@ -27,50 +33,21 @@ const byte motor1Pin4 = 18;
 const byte LED_BUILTIN = 2;
 
 const byte botLimitSwitchS = 19; 
-byte botLimitSwitchSError = 0;
-
-
-
-byte stateBotS = HIGH;
-byte lastBotS = HIGH;
-byte stateTopS = HIGH;
-int count = 0;
+char mqttIn[8];
+char mqttOut[8];
+byte stateBotS = HIGH, lastBotS = HIGH, stateTopS = HIGH , botLimitSwitchSError = 0;
 char messages[50];
-byte deskDirection = 0;
-int deskTimer = 0; 
-byte maxDeskTime = 10;
+byte deskDirection = 0, errorStatus = 0, maxDeskTime = 10, deskStored = 0 ;
+int deskTimer = 0, cycleTime = 0, count = 0;
 int maxDeskTimer = maxDeskTime * 1000;
-unsigned long currentTime, startTime, cycleTime, endTime;
-unsigned long maxMotorTime = 10000;
-unsigned long topMotorTime = 10000;
-unsigned long botMotorTime = 10000;
+unsigned long currentTime, startTime, endTime;
+unsigned long maxMotorTime = 10000, topMotorTime = 10000, botMotorTime = 10000;
 byte  looper = 1;
 long diff;
-byte errorStatus = 0;
-
-byte motor(char* motorMove, unsigned long motorTimer = 0);
 
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-
-/*void setupWifi() {
-  delay(100);
-  Serial.println("\nConnecting to");
-  Serial.println(ssid);
-
-  WiFi.begin(ssid, pass);
-
-  while(WiFi.status() != WL_CONNECTED){
-    delay(1000);
-    Serial.println("connecting....");
-  }
-
-  Serial.print("\nConnected to " );
-  Serial.println(ssid);
-  
-}
-*/
 
 void setup(){
   // Setup needed for OTA
@@ -124,11 +101,18 @@ void setup(){
   pinMode(botLimitSwitchS, INPUT);
   pinMode (LED_BUILTIN, OUTPUT);
   /*setupWifi();*/
+  EEPROM.begin(EEPROM_SIZE);
+  EEPROM.get(0, deskStatus[0]);
+  EEPROM.get(1, cycleTime);
+  Serial.print("Deskstatus from mem is");
+  Serial.println(deskStatus);
+  Serial.print("cycleTime  from mem is");
+  Serial.println(cycleTime);
   setupDesk();
   client.setServer(broker, 1883);
   client.setCallback(callback);
   reconnect();
-  statusCheck(4);
+ 
 
 }
 
@@ -140,67 +124,4 @@ void loop() {
   if ((!client.connected()) && (errorStatus!=1)){
     reconnect();
   }
- /* stateBotS= digitalRead(botLimitSwitchS);
-  if (stateBotS == LOW) {
-    motor("stop");
-    Serial.println("Switch S = clicked"); 
-  } 
-*/
-/*  buttonStateUp = digitalRead(buttonPinUp);
-  buttonStateDown = digitalRead(buttonPinDown);
-  
-
-
-  if (buttonStateUp == LOW) {
-    Serial.println("buttonstateup = LOW");
-    Serial.println("Moving Forward");
-    digitalWrite(motor1Pin1, HIGH);
-    digitalWrite(motor1Pin2, LOW); 
-    digitalWrite(motor1Pin3, LOW);
-    digitalWrite(motor1Pin4, HIGH); 
-    digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-    delay(2000);                       // wait for a second
-    digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-    Serial.println("Motor stopped");
-    digitalWrite(motor1Pin1, LOW);
-    digitalWrite(motor1Pin2, LOW); 
-    digitalWrite(motor1Pin3, LOW);
-    digitalWrite(motor1Pin4, LOW); 
-    }
-    
-  if (buttonStateDown == LOW) {
-    Serial.println("buttonstatedown = LOW");
-    digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-    delay(1000);                       // wait for a second
-    digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
-     // Move DC motor backwards at maximum speed
-    Serial.println("Moving Backwards");
-    digitalWrite(motor1Pin1, LOW);
-    digitalWrite(motor1Pin2, HIGH); 
-    digitalWrite(motor1Pin3, HIGH);
-    digitalWrite(motor1Pin4, LOW); 
-    delay(2000);
-  
-    // Stop the DC motor
-    Serial.println("Motor stopped");
-    digitalWrite(motor1Pin1, LOW);
-    digitalWrite(motor1Pin2, LOW); 
-    digitalWrite(motor1Pin3, LOW);
-    digitalWrite(motor1Pin4, LOW); 
-    } */
-      
- /* currentTime = millis();
-  if(currentTime - lastTime > 2000) {
-    count++;
-    snprintf(messages, 75, "Count:%ld", count);
-    Serial.print("Sending messages");
-    Serial.println(messages);
-    client.publish(outTopic, messages);
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(1000);
-    digitalWrite(LED_BUILTIN, LOW);
-    lastTime = millis ();
-   
-  }*/
-  // End of your programme loop
 }

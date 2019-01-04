@@ -1,6 +1,5 @@
-int extractor(char* sentTopic, byte* sentPayload, unsigned int sentLength){
-
-  char mqttIn[8] = "";
+int extractor(char sentTopic[], byte* sentPayload, unsigned int sentLength){
+ 
   int newLength = sentLength;
 
   Serial.println(""); 
@@ -35,44 +34,86 @@ int extractor(char* sentTopic, byte* sentPayload, unsigned int sentLength){
 void callback(char* topic, byte* payload, unsigned int length){
   
   extractor(topic, payload, length);
+  
   if (deskDirection == 0){
-    digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-    digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
     // Stop the DC motor
     Serial.println("Motor stopped");
     motor("stop");
  
     }
-      if (deskDirection == 1){
+    if (deskDirection == 1){
         Serial.println("Received desk_up");
         motor("up");
-        digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-        digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
         statusCheck(2);
       }
-    
     if (deskDirection == 2){
       Serial.println("Received desk DOWN");
-      digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-      digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
       motor("down");
       statusCheck(2);
     }
     if (deskDirection == 3){
       Serial.println("Received desk TOP");
       motor("top");
-      digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-      digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
       statusCheck(3);
       }
     if (deskDirection == 4){
       Serial.println("Received desk Bot");
       motor("bot");
-      digitalWrite(LED_BUILTIN, HIGH);  // turn the LED on (HIGH is the voltage level)
-      digitalWrite(LED_BUILTIN, LOW);   // turn the LED off by making the voltage LOW
       statusCheck(4);
       }
+    if (deskDirection == 'r'){
+      Serial.println("Received reset");
+      resetEEPROM();
+      statusCheck(4);
+      }  
  
+}
+
+void statusCheck(byte msg) {
+  if (msg == 1) {
+    deskStatus[0] = '1';
+    deskStatus[1] = '\0';
+    client.publish(outStatus, deskStatus);
+    Serial.println(" Error Detected, Deep sleep ON, errorStatus Set");
+    esp_deep_sleep_start();
+  } else if (msg == 2) {
+    Serial.println(" Staus Check 2, Desk inbetween - Manual Mode,  MQTT 2 Sent");
+    deskStatus[0] = '2';
+    deskStatus[1] = '\0';
+    EEPROM.put(1,(byte)deskStatus[0]);
+    client.publish(outStatus, deskStatus);
+  } else if (msg == 3) {
+    Serial.println(" Staus Check 3, Desk Top, MQTT 3 Sent");
+    deskStatus[0] = '3';
+    deskStatus[1] = '\0';
+    EEPROM.put(1,(byte)deskStatus[0]);
+    client.publish(outStatus, deskStatus);
+  } else if (msg == 4) {
+    Serial.println(" Staus Check 4, Desk bot, MQTT 4 Sent");
+    deskStatus[0] = '4';
+    deskStatus[1] = '\0';
+    EEPROM.put(1,(byte)deskStatus[0]);
+    client.publish(outStatus, deskStatus);
+  } else if (msg == '5') {
+    Serial.println(" Staus Check 5, Desk reset request, MQTT 5 Sent");
+    deskStatus[0] = '5';
+    deskStatus[1] = '\0';
+    EEPROM.put(1,(byte)deskStatus[0]);
+    client.publish(outStatus, deskStatus);
+  }
+  else { 
+    Serial.println("Error Status 0");
+    errorStatus = 0;
+    deskStatus[0] = 0;
+    deskStatus[1] = '\0';
+    EEPROM.put(1,deskStatus);
+    client.publish(outStatus, deskStatus);
+    EEPROM.get(1,deskStatus);
+    Serial.print("EEPROM get is");
+    Serial.println(deskStatus);
+    
+  }
+  EEPROM.end();
 }
 
 void reconnect(){
