@@ -4,7 +4,7 @@ void setupDesk(){
   EEPROM.begin(EEPROM_SIZE);
   stateBotS= digitalRead(botLimitSwitchS);
   EEPROM.get(0,deskPrev);
-  if (deskPrev == 818) {
+  if (deskPrev == 88) {
     EEPROM.get(10, deskStatus);
     EEPROM.get(20, cycleTime);
   } else if (stateBotS == HIGH) {
@@ -97,4 +97,5 @@ int cycleTimer(){
     EEPROM.put(0,magicChar);
     EEPROM.end(); 
   }
+
 

@@ -100,17 +100,17 @@ void setup(){
    client.setServer(broker, 1883);
   client.setCallback(callback);
   /*setupWifi();*/
-  int temp;
+  int cycTime,magicInMem;
   EEPROM.begin(EEPROM_SIZE);
-  EEPROM.get(0, magicChar);
   EEPROM.get(10, deskStatus);
-  EEPROM.get(20, temp);
-  Serial.print("magicChar  from mem 0 is");
-  Serial.println(magicChar);
+  EEPROM.get(0, magicInMem);
+  EEPROM.get(20, cycTime);
   Serial.print("Deskstatus from mem 10 is");
   Serial.println(deskStatus);
-  Serial.print("cycleTime  from mem 20 is");
-  Serial.println(cycleTime); 
+  Serial.print("magicInMem  from mem 0 is");
+  Serial.println(magicInMem);
+  Serial.print("cycTime from mem 20 is");
+  Serial.println(cycTime); 
   reconnect();
   setupDesk();
  
