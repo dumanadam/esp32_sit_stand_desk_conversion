@@ -5,7 +5,6 @@ void motorMove (char motorMove[]) {
     digitalWrite(motor1Pin3, LOW);
     digitalWrite(motor1Pin4, LOW); 
   } else if (motorMove == "up"){
-    Serial.println("motor going up"); 
     digitalWrite(motor1Pin1, HIGH);
     digitalWrite(motor1Pin2, LOW); 
     digitalWrite(motor1Pin3, LOW);
@@ -27,10 +26,10 @@ void motorMove (char motorMove[]) {
 void motor(char message[]) {
   stateBotS= digitalRead(botLimitSwitchS);
   startTime = millis();
-  Serial.println("motor Start Time is: ");
+ /* Serial.println("motor Start Time is: ");
   Serial.println(startTime);
   Serial.print("stateBots is ");
-  Serial.println(stateBotS);
+  Serial.println(stateBotS);*/
   
   if(message == "stop") {
     Serial.println("motor STOPPED"); 
@@ -39,21 +38,17 @@ void motor(char message[]) {
     startTime = millis();
     motorMove("up"); 
     Serial.println("motor going up"); 
-    Serial.print("stateBots is ");
     while (((millis() - startTime) < maxMotorTime) && stateBotS == LOW ) {
       stateBotS= digitalRead(botLimitSwitchS);
-      /*Serial.println(stateBotS);*/
       }
     motorMove("stop");
-    statusCheck(2);
+    statusCheck(1);
   } else if (message == "down") {
     startTime = millis();
     motorMove("down"); 
     Serial.println("motor going downbot"); 
-    Serial.print("stateBots is ");
     while (((millis() - startTime) < maxMotorTime) && stateBotS == LOW ) {
       stateBotS= digitalRead(botLimitSwitchS);
-      /*Serial.println(stateBotS);*/
       }
     motorMove("stop");
     statusCheck(2);
@@ -61,10 +56,8 @@ void motor(char message[]) {
     startTime = millis();
     motorMove("up"); 
     Serial.println("motor going top"); 
-    Serial.print("stateBots is ");
     while (((millis() - startTime) < maxMotorTime) && stateBotS == LOW ) {
       stateBotS= digitalRead(botLimitSwitchS);
-      /*Serial.println(stateBotS);*/
       }
     motorMove("stop");
     statusCheck(3);
@@ -72,10 +65,8 @@ void motor(char message[]) {
     startTime = millis();
     motorMove("down"); 
     Serial.println("motor going bot"); 
-    Serial.print("stateBots is ");
     while (((millis() - startTime) < maxMotorTime) && stateBotS == LOW) {
     stateBotS= digitalRead(botLimitSwitchS);
-      /*Serial.println(stateBotS);*/
       }
     motorMove("stop");
     statusCheck(4);

@@ -11,15 +11,14 @@
 /* const char* brokerUser = "gengisville";
  *  const char* brokerPass = "gengisville";
  */
-#define EEPROM_SIZE 32
+#define EEPROM_SIZE 1024
 
  
 const char* broker = "192.168.20.200";
 /*const char* outTopic = "/Desk/out";*/
 const char* outStatus = "/Desk/status";
-const char* inTopic = "/Desk/cmd";
+const char* inTopic = "/Desk/in/cmd";
 char deskStatus[2] = "8";
-char deskSet = 'x';
 
 const byte buttonPinUp = 4; 
 const byte buttonPinDown = 15; 
@@ -30,20 +29,20 @@ const byte motor1Pin1 = 16;
 const byte motor1Pin2 = 17; 
 const byte motor1Pin3 = 5; 
 const byte motor1Pin4 = 18;  
-const byte LED_BUILTIN = 2;
 
 const byte botLimitSwitchS = 19; 
 char mqttIn[8];
 char mqttOut[8];
 byte stateBotS = HIGH, lastBotS = HIGH, stateTopS = HIGH , botLimitSwitchSError = 0;
 char messages[50];
-byte deskDirection = 0, errorStatus = 0, maxDeskTime = 10, deskStored = 0 ;
-int deskTimer = 0, cycleTime = 0, count = 0;
+byte deskDirection = 0, errorStatus = 0, maxDeskTime = 10 ;
+int deskTimer = 0, count = 0, timeStore,debugCyc;
 int maxDeskTimer = maxDeskTime * 1000;
-unsigned long currentTime, startTime, endTime;
-unsigned long maxMotorTime = 10000, topMotorTime = 10000, botMotorTime = 10000;
+int currentTime, startTime, endTime, cycleTime;
+int maxMotorTime = 2000;
 byte  looper = 1;
 long diff;
+char magicChar[2] = "X";
 
 
 WiFiClient espClient;
@@ -91,7 +90,6 @@ void setup(){
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
  //  My setup onwards
-  pinMode(LED_BUILTIN, OUTPUT);
   pinMode(buttonPinUp, INPUT_PULLUP);
   pinMode(buttonPinDown, INPUT_PULLUP); 
   pinMode(motor1Pin1, OUTPUT);
@@ -99,19 +97,22 @@ void setup(){
   pinMode(motor1Pin3, OUTPUT);
   pinMode(motor1Pin4, OUTPUT);
   pinMode(botLimitSwitchS, INPUT);
-  pinMode (LED_BUILTIN, OUTPUT);
-  /*setupWifi();*/
-  EEPROM.begin(EEPROM_SIZE);
-  EEPROM.get(0, deskStatus[0]);
-  EEPROM.get(1, cycleTime);
-  Serial.print("Deskstatus from mem is");
-  Serial.println(deskStatus);
-  Serial.print("cycleTime  from mem is");
-  Serial.println(cycleTime);
-  setupDesk();
-  client.setServer(broker, 1883);
+   client.setServer(broker, 1883);
   client.setCallback(callback);
+  /*setupWifi();*/
+  int temp;
+  EEPROM.begin(EEPROM_SIZE);
+  EEPROM.get(0, magicChar);
+  EEPROM.get(10, deskStatus);
+  EEPROM.get(20, temp);
+  Serial.print("magicChar  from mem 0 is");
+  Serial.println(magicChar);
+  Serial.print("Deskstatus from mem 10 is");
+  Serial.println(deskStatus);
+  Serial.print("cycleTime  from mem 20 is");
+  Serial.println(cycleTime); 
   reconnect();
+  setupDesk();
  
 
 }
@@ -125,3 +126,5 @@ void loop() {
     reconnect();
   }
 }
+
+
