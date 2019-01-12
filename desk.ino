@@ -17,7 +17,9 @@
 const char* broker = "192.168.20.200";
 /*const char* outTopic = "/Desk/out";*/
 const char* outStatus = "/Desk/status";
-const char* inTopic = "/Desk/in/cmd";
+const char* outPerc = "/Desk/perc";
+const char* outDebug = "/Desk/debug";
+const char* inTopic = "/Desk/cmf";
 char deskStatus[2] = "8";
 
 const byte buttonPinUp = 4; 
@@ -31,24 +33,28 @@ const byte motor1Pin3 = 5;
 const byte motor1Pin4 = 18;  
 
 const byte botLimitSwitchS = 19; 
+
 char mqttIn[8];
 char mqttOut[8];
 byte stateBotS = HIGH, lastBotS = HIGH, stateTopS = HIGH , botLimitSwitchSError = 0;
 char messages[50];
 byte deskDirection = 0, errorStatus = 0, maxDeskTime = 10 ;
-int deskTimer = 0, count = 0, timeStore,debugCyc;
-int maxDeskTimer = maxDeskTime * 1000;
-int currentTime, startTime, endTime, cycleTime;
-int maxMotorTime = 2000;
-byte  looper = 1;
-long diff;
+int count = 0, timeStore,debugCyc, debounceDelay = 500;
+int maxDeskTimer = 40000; /* Maximum bottom to top cycle time. Sert as Seconds. Set this manually for safety*/
+int deskTimer = 0; /* MQTT incoming time */
+int currentTime, startTime, endTime, cycleTime, deskPos, deskPosP;
+int maxMotorTime = 7500; /* Maually set  max bot to top cycle time*/
+int safeTopTime = (int)maxMotorTime *.9;
+int safeBotTime = (int)maxMotorTime *.1;
 char magicChar[2] = "X";
+
 
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 
 void setup(){
+  int cycTime,magicInMem;
   // Setup needed for OTA
   Serial.begin(115200);
   Serial.println("Booting");
@@ -100,16 +106,18 @@ void setup(){
    client.setServer(broker, 1883);
   client.setCallback(callback);
   /*setupWifi();*/
-  int cycTime,magicInMem;
   EEPROM.begin(EEPROM_SIZE);
   EEPROM.get(10, deskStatus);
   EEPROM.get(0, magicInMem);
   EEPROM.get(20, cycTime);
-  Serial.print("Deskstatus from mem 10 is");
+  EEPROM.get(30, deskPos);
+  Serial.print("Deskstatus from mem 10 is ");
   Serial.println(deskStatus);
-  Serial.print("magicInMem  from mem 0 is");
+  Serial.print("magicInMem  from mem 0 is ");
   Serial.println(magicInMem);
-  Serial.print("cycTime from mem 20 is");
+  Serial.print("cycTime from mem 20 is ");
+  Serial.println(cycTime); 
+  Serial.print("deskPos from mem 30 is ");
   Serial.println(cycTime); 
   reconnect();
   setupDesk();

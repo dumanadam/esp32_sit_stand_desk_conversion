@@ -23,7 +23,10 @@ int extractor(char sentTopic[], byte* sentPayload, unsigned int sentLength){
       }  
 
     deskTimer = atoi(mqttIn);
-    if (deskTimer > maxDeskTimer ) deskTimer = 10;
+     Serial.println(deskDirection);
+    Serial.println(deskTimer);
+    
+    if (deskTimer > maxDeskTimer ) deskTimer = maxDeskTimer;
 
     
     Serial.println(deskDirection);
@@ -34,29 +37,24 @@ int extractor(char sentTopic[], byte* sentPayload, unsigned int sentLength){
 void callback(char* topic, byte* payload, unsigned int length){
   
   extractor(topic, payload, length);
-  
-  if (deskDirection == 0){
-    // Stop the DC motor
-    Serial.println("Motor stopped");
-    motor("stop");
- 
-    }
-    if (deskDirection == 1){
+  int deskCheck = deskPosPerc();
+
+    if (deskDirection == 0){
+      // Stop the DC motor
+      Serial.println("Motor stopped");
+      motor("stop");
+      } else if (deskDirection == 1 and (deskPos + deskTimer) < safeTopTime ){
         Serial.println("Received desk_up");
-        motor("up");
-        /*statusCheck(1);*/
-      } else  if (deskDirection == 2){
+        motor("up", deskTimer);
+      } else  if (deskDirection == 2 and (deskPos- deskTimer) > safeBotTime ){
         Serial.println("Received desk DOWN");
-        motor("down");
-       /* statusCheck(2);*/
-      } else if (deskDirection == 3){
+        motor("down", deskTimer);
+      } else if (deskDirection == 3 and deskPos < safeTopTime ){
         Serial.println("Received desk TOP");
         motor("top");
-        /*statusCheck(3);*/
-      } else if (deskDirection == 4){
+      } else if (deskDirection == 4 and deskPos > safeBotTime ){
         Serial.println("Received desk Bot");
         motor("bot");
-        /*statusCheck(4);*/
       } else if (deskDirection == 5){
         Serial.println("Received Debug");
         statusCheck(5);
@@ -65,34 +63,52 @@ void callback(char* topic, byte* payload, unsigned int length){
         statusCheck(6);
       } else {
         Serial.println("Cant identify Topic #");
-      }  
- 
+      }
+  
+    
 }
 
 void statusCheck(byte msg) {
+  char outPayload[50];
   EEPROM.begin(EEPROM_SIZE);
   if (msg == 1) {
-    Serial.println(" Staus Check 1, Desk inbetween - Manual Mode,  MQTT 2 Sent");
+    Serial.println(" Staus Check 1, Desk inbetween - Manual Mode,  MQTT 1 Sent");
     deskStatus[0] = '1';
     deskStatus[1] = '\0';
+    Serial.println(" deskpos");
+    Serial.println(deskPos);
     EEPROM.put(10,deskStatus);
     client.publish(outStatus, deskStatus);
   } else if (msg == 2) {
     Serial.println(" Staus Check 2, Desk inbetween - Manual Mode,  MQTT 2 Sent");
     deskStatus[0] = '2';
     deskStatus[1] = '\0';
+    Serial.println(" deskpos in stat 2");
+    Serial.println(deskPos);
     EEPROM.put(10,deskStatus);
     client.publish(outStatus, deskStatus);
   } else if (msg == 3) {
     Serial.println(" Staus Check 3, Desk Top, MQTT 3 Sent");
     deskStatus[0] = '3';
     deskStatus[1] = '\0';
+  Serial.println("in statuscheck 3 deskpos, cycleTime");
+  Serial.println(deskPos);
+  Serial.println(cycleTime);
+
+    int temp = deskPosPerc();
+    Serial.print("deskPosPerc is ");
+    Serial.println(temp);
+    sprintf(outPayload, "%d", temp);
+    Serial.println(deskPos);
     EEPROM.put(10,deskStatus);
     client.publish(outStatus, deskStatus);
+    /*lient.publish(outPerc, outPayload);*/
   } else if (msg == 4) {
     Serial.println(" Staus Check 4, Desk bot, MQTT 4 Sent");
     deskStatus[0] = '4';
     deskStatus[1] = '\0';
+    Serial.println(" deskpos");
+    Serial.println(deskPos);
     EEPROM.put(10,deskStatus);
     client.publish(outStatus, deskStatus);
   } else if (msg == 5) {
@@ -117,6 +133,16 @@ void statusCheck(byte msg) {
   Serial.println(" EEPROM Saved");
   EEPROM.end();
 }
+
+int deskPosPerc() {
+  int percentage = ((float)deskPos / (float)cycleTime) * 100;
+  Serial.println(" deskpos, cycleTime, Perc");
+  Serial.println(deskPos);
+  Serial.println(cycleTime);
+  Serial.println(percentage);
+  return percentage;
+  }
+
 
 void reconnect(){
   while(!client.connected()){

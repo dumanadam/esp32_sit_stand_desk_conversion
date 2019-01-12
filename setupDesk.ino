@@ -4,14 +4,17 @@ void setupDesk(){
   EEPROM.begin(EEPROM_SIZE);
   stateBotS= digitalRead(botLimitSwitchS);
   EEPROM.get(0,deskPrev);
-  if (deskPrev == 88) {
+  if (deskPrev == 818) {
     EEPROM.get(10, deskStatus);
     EEPROM.get(20, cycleTime);
   } else if (stateBotS == HIGH) {
     statusCheck(1);
   } else {
     timedCycle = cycleTimer();
+    deskPos = timedCycle;
     updateCycleTimer(timedCycle);
+    cycleTime = timedCycle;
+    deskPosP = 100; /* set position % as 100% */
   }
     
 }
@@ -25,7 +28,7 @@ void resetEEPROM(){
 }
 
 void serialDebug (){
-  int storedMagic, storedDeskStatus, storedCycleTime;
+  int storedMagic, storedDeskStatus, storedCycleTime, storedDeskPos;
   int f;
   /*char w[6];
   w[0] = '2';
@@ -39,12 +42,15 @@ void serialDebug (){
   EEPROM.get(0, storedMagic);
   EEPROM.get(10, storedDeskStatus);
   EEPROM.get(20, storedCycleTime);
+  EEPROM.get(30, storedDeskPos);
   Serial.print("storedMagic  from mem 0 is");
   Serial.println(storedMagic);
   Serial.print("storedDeskStatus from mem 10 is");
   Serial.println(storedDeskStatus);
   Serial.print("storedCycleTime from mem 20 is");
   Serial.println(storedCycleTime); 
+  Serial.print("deskPos from mem 30 is");
+  Serial.println(deskPos); 
 
   Serial.println(" ------");
 
@@ -76,25 +82,45 @@ int cycleTimer(){
     Serial.println("Testing bottom Limit Switch");
     Serial.println("");
     stateBotS= digitalRead(botLimitSwitchS);
-    motor("bot");
+    startTime = millis();
+    motorMove("down"); 
+    Serial.println("motor going bot"); 
+    while (((millis() - startTime) < maxMotorTime) && stateBotS == LOW) {
+      stateBotS= digitalRead(botLimitSwitchS);
+    }
+    motorMove("stop");
+    startTime = millis();                   /* to switch from going down to up or vice versa*/
+    motorMove("up"); 
+    Serial.println("motor debouncing bot"); 
+    while (((millis() - startTime) < 1000)) {
+    }
     startT = millis();
     Serial.println("Timing full cycle - Top cycle" );
-    motor("top");
+    startTime = millis();
+    motorMove("up"); 
+    Serial.println("motor going top"); 
+    while ((millis() - startTime) < safeTopTime) {
+  
+    }
+    motorMove("stop");
     cycleT = millis();
-    diff = cycleT - startT;
+    diff = (cycleT - startT); /*cycle time from bot to top based on safeTopTime*/
     Serial.println(" ");
     Serial.print("Cycle Time  ");
     Serial.println(diff);
     Serial.println(" ");
+    statusCheck(3);
     return diff;
   }
 
   void updateCycleTimer(int cycTime){
     EEPROM.begin(EEPROM_SIZE);
+    Serial.print("Cycle Time in updateCycleTimer ");
     Serial.println(cycTime);
     Serial.println(" ");
-    EEPROM.put(20,cycTime);
     EEPROM.put(0,magicChar);
+    EEPROM.put(20,cycTime);
+    EEPROM.put(30,deskPos);
     EEPROM.end(); 
   }
 
