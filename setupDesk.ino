@@ -10,10 +10,12 @@ void setupDesk(){
   } else if (stateBotS == HIGH) {
     statusCheck(1);
   } else {
-    timedCycle = cycleTimer();
-    deskPos = timedCycle;
+    cycleTime = cycleTimer();
+    deskPos = cycleTime;
+    Serial.print("CycleTime in setup is ");
+    Serial.println(cycleTime); 
     updateCycleTimer(timedCycle);
-    cycleTime = timedCycle;
+        statusCheck(3);
     deskPosP = 100; /* set position % as 100% */
   }
     
@@ -109,7 +111,6 @@ int cycleTimer(){
     Serial.print("Cycle Time  ");
     Serial.println(diff);
     Serial.println(" ");
-    statusCheck(3);
     return diff;
   }
 

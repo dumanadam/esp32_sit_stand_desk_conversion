@@ -78,7 +78,17 @@ void statusCheck(byte msg) {
     Serial.println(" deskpos");
     Serial.println(deskPos);
     EEPROM.put(10,deskStatus);
+    
     client.publish(outStatus, deskStatus);
+
+    int temp = deskPosPerc();
+    Serial.print("deskPosPerc is ");
+    Serial.println(temp);
+    EEPROM.put(30,temp);
+    sprintf(outPayload, "%d", temp);
+    Serial.println(outPayload);
+    client.publish(outPerc, outPayload);
+    
   } else if (msg == 2) {
     Serial.println(" Staus Check 2, Desk inbetween - Manual Mode,  MQTT 2 Sent");
     deskStatus[0] = '2';
@@ -87,6 +97,15 @@ void statusCheck(byte msg) {
     Serial.println(deskPos);
     EEPROM.put(10,deskStatus);
     client.publish(outStatus, deskStatus);
+
+    int temp = deskPosPerc();
+    Serial.print("deskPosPerc is ");
+    Serial.println(temp);
+    EEPROM.put(30,temp);
+    sprintf(outPayload, "%d", temp);
+    Serial.println(outPayload);
+    client.publish(outPerc, outPayload);
+    
   } else if (msg == 3) {
     Serial.println(" Staus Check 3, Desk Top, MQTT 3 Sent");
     deskStatus[0] = '3';
@@ -94,15 +113,16 @@ void statusCheck(byte msg) {
   Serial.println("in statuscheck 3 deskpos, cycleTime");
   Serial.println(deskPos);
   Serial.println(cycleTime);
-
-    int temp = deskPosPerc();
-    Serial.print("deskPosPerc is ");
-    Serial.println(temp);
-    sprintf(outPayload, "%d", temp);
-    Serial.println(deskPos);
     EEPROM.put(10,deskStatus);
     client.publish(outStatus, deskStatus);
-    /*lient.publish(outPerc, outPayload);*/
+     int temp = deskPosPerc();
+    Serial.print("deskPosPerc is ");
+    Serial.println(temp);
+    EEPROM.put(30,temp);
+    sprintf(outPayload, "%d", temp);
+    Serial.println(outPayload);
+    client.publish(outPerc, outPayload);
+
   } else if (msg == 4) {
     Serial.println(" Staus Check 4, Desk bot, MQTT 4 Sent");
     deskStatus[0] = '4';
@@ -111,6 +131,14 @@ void statusCheck(byte msg) {
     Serial.println(deskPos);
     EEPROM.put(10,deskStatus);
     client.publish(outStatus, deskStatus);
+    int temp = deskPosPerc();
+    Serial.print("deskPosPerc is ");
+    Serial.println(temp);
+    EEPROM.put(30,temp);
+    sprintf(outPayload, "%d", temp);
+    Serial.println(outPayload);
+    client.publish(outPerc, outPayload);
+    
   } else if (msg == 5) {
     Serial.println(" Debug Requested");
     serialDebug();

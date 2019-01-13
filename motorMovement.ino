@@ -41,13 +41,11 @@ void motor(char message[], int motorTimer = maxMotorTime) {
     motorMove("up"); 
     Serial.println("motor going up"); 
     while (((millis() - startTime) < motorTimer) && deskPos < safeTopTime ) {
-      deskPos += (millis() - startTime);
-      Serial.println(deskPos);
+     
     }
     motorMove("stop");
-    deskCheck = deskPosPerc();
+    deskPos += (millis() - startTime);
     statusCheck(1);
-
   } else if (message == "down") {
     startTime = millis();
     motorMove("down"); 
@@ -60,9 +58,7 @@ void motor(char message[], int motorTimer = maxMotorTime) {
     }
     motorMove("stop");
     deskPos -= (millis() - startTime);
-    deskCheck = deskPosPerc();
-    statusCheck(2);
-    
+    statusCheck(2);    
   } else if (message == "top"){
     startTime = millis();
     motorMove("up"); 
@@ -70,33 +66,25 @@ void motor(char message[], int motorTimer = maxMotorTime) {
     while (((millis() - startTime) < (safeTopTime - deskPos)) && deskPos < safeTopTime) {
       }
     motorMove("stop");
-    Serial.println(deskPos);
     deskPos += (millis() - startTime);
-    deskCheck = deskPosPerc();
-    statusCheck(3);
-    
+    statusCheck(3);    
   } else if (message == "bot"){
     startTime = millis();
     motorMove("down"); 
     Serial.println("motor going bot"); 
-    Serial.print("deskPos before = "); 
-    Serial.println(deskPos); 
     while (((millis() - startTime) < (deskPos - safeBotTime)) && stateBotS == LOW) {
       stateBotS= digitalRead(botLimitSwitchS);      
   }
-  deskPos -= (millis() - startTime);
   motorMove("stop");
-  Serial.println(deskPos);
-  if(stateBotS == HIGH) {
-    startTime = millis();                   /* to switch from going down to up or vice versa*/
+  deskPos -= (millis() - startTime);
+  if(stateBotS == HIGH) {  /* If switch left touching move up for 1 sec*/
+    startTime = millis();                   
     motorMove("up"); 
     Serial.println("motor debouncing bot"); 
     while (((millis() - startTime) < 1000)) {
     } 
   }
-  deskCheck = deskPosPerc();
   statusCheck(4);
-    
   } else if (message == "debounceBot"){    /* debounceBot used to lift from max bot and release endstop in case motor too slow*/
     startTime = millis();                   /* to switch from going down to up or vice versa*/
     motorMove("up"); 
