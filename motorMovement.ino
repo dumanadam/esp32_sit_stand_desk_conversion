@@ -24,7 +24,7 @@ void motorMove (char motorMove[]) {
 }
 
 void motor(char message[], int motorTimer = maxMotorTime) {
-  int deskCheck;
+  
   stateBotS= digitalRead(botLimitSwitchS);
   startTime = millis();
  /* Serial.println("motor Start Time is: ");
@@ -40,43 +40,44 @@ void motor(char message[], int motorTimer = maxMotorTime) {
     startTime = millis();
     motorMove("up"); 
     Serial.println("motor going up"); 
-    while (((millis() - startTime) < motorTimer) && deskPos < safeTopTime ) {
+    while (((millis() - startTime) < motorTimer) && deskPosInMilli < safeTopTime ) {
      
     }
     motorMove("stop");
-    deskPos += (millis() - startTime);
+    deskPosInMilli += (millis() - startTime);
     statusCheck(1);
   } else if (message == "down") {
     startTime = millis();
     motorMove("down"); 
     Serial.print("motor going down, motortimr = "); 
     Serial.println(motorTimer); 
-    Serial.print("deskPos before = "); 
-    Serial.println(deskPos); 
+    Serial.print("deskPosInMilli before = "); 
+    Serial.println(deskPosInMilli); 
     while (((millis() - startTime) < motorTimer) && stateBotS == LOW ) {
       stateBotS= digitalRead(botLimitSwitchS);
     }
     motorMove("stop");
-    deskPos -= (millis() - startTime);
-    statusCheck(2);    
+    deskPosInMilli -= (millis() - startTime);
+    if (deskPosP <= 20) statusCheck(4);
+    if (deskPosP > 20) statusCheck(3);
   } else if (message == "top"){
     startTime = millis();
     motorMove("up"); 
     Serial.println("motor going top"); 
-    while (((millis() - startTime) < (safeTopTime - deskPos)) && deskPos < safeTopTime) {
+    while (((millis() - startTime) < (safeTopTime - deskPosInMilli)) && deskPosInMilli < safeTopTime) {
       }
     motorMove("stop");
-    deskPos += (millis() - startTime);
+    deskPosInMilli += (millis() - startTime);
     statusCheck(3);    
   } else if (message == "bot"){
     startTime = millis();
     motorMove("down"); 
     Serial.println("motor going bot"); 
-    while (((millis() - startTime) < (deskPos - safeBotTime)) && stateBotS == LOW) {
+    while (((millis() - startTime) < (deskPosInMilli - safeBotTime)) && stateBotS == LOW) {
       stateBotS= digitalRead(botLimitSwitchS);      
   }
   motorMove("stop");
-  deskPos -= (millis() - startTime);
+  deskPosInMilli -= (millis() - startTime);
   if(stateBotS == HIGH) {  /* If switch left touching move up for 1 sec*/
     startTime = millis();                   
     motorMove("up"); 
@@ -92,7 +93,7 @@ void motor(char message[], int motorTimer = maxMotorTime) {
     while (((millis() - startTime) < 1000)) {
       
     }
-    deskPos += (millis() - startTime);
+    deskPosInMilli += (millis() - startTime);
     Serial.println("debounce bot");
     motorMove("stop");
     
@@ -104,7 +105,7 @@ void motor(char message[], int motorTimer = maxMotorTime) {
       
     }
     motorMove("stop");
-    deskPos -= (millis() - startTime);
+    deskPosInMilli -= (millis() - startTime);
     Serial.println("debounce top");
     
   }  else {
@@ -113,4 +114,5 @@ void motor(char message[], int motorTimer = maxMotorTime) {
     /*statusCheck(1);   */
   }
 }
+
 

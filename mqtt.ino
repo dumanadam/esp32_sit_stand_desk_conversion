@@ -16,19 +16,12 @@ int extractor(char sentTopic[], byte* sentPayload, unsigned int sentLength){
     } else {
     deskDirection = mqttIn[0]- '0';
     memset(mqttIn, 0, sizeof(mqttIn));
-   /* mqttIn[newlength +1] = '\0';*/
     newLength -=2;
     for (int i=0; i<newLength; i++) {
       mqttIn[i] = (char)sentPayload[i+2];
-      }  
-
+    }
     deskTimer = atoi(mqttIn);
-     Serial.println(deskDirection);
-    Serial.println(deskTimer);
-    
-    if (deskTimer > maxDeskTimer ) deskTimer = maxDeskTimer;
-
-    
+    if (deskTimer > maxMotorTime ) deskTimer = maxMotorTime;
     Serial.println(deskDirection);
     Serial.println(deskTimer);
   }
@@ -37,22 +30,22 @@ int extractor(char sentTopic[], byte* sentPayload, unsigned int sentLength){
 void callback(char* topic, byte* payload, unsigned int length){
   
   extractor(topic, payload, length);
-  int deskCheck = deskPosPerc();
+  
 
     if (deskDirection == 0){
       // Stop the DC motor
       Serial.println("Motor stopped");
       motor("stop");
-      } else if (deskDirection == 1 and (deskPos + deskTimer) < safeTopTime ){
+      } else if (deskDirection == 1 and (deskPosInMilli + deskTimer) < safeTopTime ){
         Serial.println("Received desk_up");
         motor("up", deskTimer);
-      } else  if (deskDirection == 2 and (deskPos- deskTimer) > safeBotTime ){
+      } else  if (deskDirection == 2 and (deskPosInMilli- deskTimer) > safeBotTime ){
         Serial.println("Received desk DOWN");
         motor("down", deskTimer);
-      } else if (deskDirection == 3 and deskPos < safeTopTime ){
+      } else if (deskDirection == 3 and deskPosInMilli < safeTopTime ){
         Serial.println("Received desk TOP");
         motor("top");
-      } else if (deskDirection == 4 and deskPos > safeBotTime ){
+      } else if (deskDirection == 4 and deskPosInMilli > safeBotTime ){
         Serial.println("Received desk Bot");
         motor("bot");
       } else if (deskDirection == 5){
@@ -72,73 +65,42 @@ void statusCheck(byte msg) {
   char outPayload[50];
   EEPROM.begin(EEPROM_SIZE);
   if (msg == 1) {
+    deskPosP = deskPosPerc();    
     Serial.println(" Staus Check 1, Desk inbetween - Manual Mode,  MQTT 1 Sent");
     deskStatus[0] = '1';
     deskStatus[1] = '\0';
-    Serial.println(" deskpos");
-    Serial.println(deskPos);
-    EEPROM.put(10,deskStatus);
-    
+    eepStatusSave('s',deskStatus,deskPosInMilli, deskPosP);
     client.publish(outStatus, deskStatus);
-
-    int temp = deskPosPerc();
-    Serial.print("deskPosPerc is ");
-    Serial.println(temp);
-    EEPROM.put(30,temp);
-    sprintf(outPayload, "%d", temp);
-    Serial.println(outPayload);
+    sprintf(outPayload, "%d", deskPosP);
     client.publish(outPerc, outPayload);
-    
   } else if (msg == 2) {
+    deskPosP = deskPosPerc();
     Serial.println(" Staus Check 2, Desk inbetween - Manual Mode,  MQTT 2 Sent");
     deskStatus[0] = '2';
     deskStatus[1] = '\0';
-    Serial.println(" deskpos in stat 2");
-    Serial.println(deskPos);
-    EEPROM.put(10,deskStatus);
+    eepStatusSave('s', deskStatus,deskPosInMilli, deskPosP);  
     client.publish(outStatus, deskStatus);
-
-    int temp = deskPosPerc();
-    Serial.print("deskPosPerc is ");
-    Serial.println(temp);
-    EEPROM.put(30,temp);
-    sprintf(outPayload, "%d", temp);
-    Serial.println(outPayload);
+    sprintf(outPayload, "%d", deskPosP);
     client.publish(outPerc, outPayload);
-    
   } else if (msg == 3) {
+    deskPosP = deskPosPerc();
     Serial.println(" Staus Check 3, Desk Top, MQTT 3 Sent");
     deskStatus[0] = '3';
     deskStatus[1] = '\0';
-  Serial.println("in statuscheck 3 deskpos, cycleTime");
-  Serial.println(deskPos);
-  Serial.println(cycleTime);
-    EEPROM.put(10,deskStatus);
+    Serial.println("in statuscheck 3 deskPosInMilli, cycleTime");
+    eepStatusSave('s', deskStatus,deskPosInMilli, deskPosP);
     client.publish(outStatus, deskStatus);
-     int temp = deskPosPerc();
-    Serial.print("deskPosPerc is ");
-    Serial.println(temp);
-    EEPROM.put(30,temp);
-    sprintf(outPayload, "%d", temp);
-    Serial.println(outPayload);
+    sprintf(outPayload, "%d", deskPosP);
     client.publish(outPerc, outPayload);
-
   } else if (msg == 4) {
+    deskPosP = deskPosPerc();
     Serial.println(" Staus Check 4, Desk bot, MQTT 4 Sent");
     deskStatus[0] = '4';
     deskStatus[1] = '\0';
-    Serial.println(" deskpos");
-    Serial.println(deskPos);
-    EEPROM.put(10,deskStatus);
+    eepStatusSave('s', deskStatus,deskPosInMilli, deskPosP); 
     client.publish(outStatus, deskStatus);
-    int temp = deskPosPerc();
-    Serial.print("deskPosPerc is ");
-    Serial.println(temp);
-    EEPROM.put(30,temp);
-    sprintf(outPayload, "%d", temp);
-    Serial.println(outPayload);
+    sprintf(outPayload, "%d", deskPosP);
     client.publish(outPerc, outPayload);
-    
   } else if (msg == 5) {
     Serial.println(" Debug Requested");
     serialDebug();
@@ -158,18 +120,19 @@ void statusCheck(byte msg) {
     deskStatus[1] = '\0';
     /*esp_deep_sleep_start();*/
   }
-  Serial.println(" EEPROM Saved");
   EEPROM.end();
 }
 
 int deskPosPerc() {
-  int percentage = ((float)deskPos / (float)cycleTime) * 100;
-  Serial.println(" deskpos, cycleTime, Perc");
-  Serial.println(deskPos);
+  int percentage = ((float)deskPosInMilli / (float)cycleTime) * 100;
+  Serial.println(" deskPosInMilli, cycleTime, Perc");
+  Serial.println(deskPosInMilli);
   Serial.println(cycleTime);
   Serial.println(percentage);
   return percentage;
   }
+
+
 
 
 void reconnect(){
@@ -179,9 +142,11 @@ void reconnect(){
     if (client.connect("desk")){
       Serial.println("\nSuccess! Connected to broker!");
       client.subscribe(inTopic);
+      eepStatusSave('r');
     } else {
       Serial.println("Trying again in 5 seconds");
       delay(5000);
       }
       }
 }
+

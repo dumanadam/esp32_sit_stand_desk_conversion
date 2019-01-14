@@ -4,21 +4,31 @@ void setupDesk(){
   EEPROM.begin(EEPROM_SIZE);
   stateBotS= digitalRead(botLimitSwitchS);
   EEPROM.get(0,deskPrev);
-  if (deskPrev == 818) {
-    EEPROM.get(10, deskStatus);
-    EEPROM.get(20, cycleTime);
+  if (deskPrev == magicChar[0]) {
+    Serial.println("magicchar match");
+    eepStatusSave('r');
+     if (deskStatus[0] >= '1' and deskStatus[0] <= '3') {
+    Serial.println(" eepstatussave 3");
+    statusCheck(3);
+  } else if (deskStatus[0] == '4') {
+    Serial.println("eepstatussave 4");
+    statusCheck(4);
+  } else {
+    Serial.println("you fucked up");
+    }
   } else if (stateBotS == HIGH) {
     statusCheck(1);
   } else {
+    Serial.print("setup cycle");
     cycleTime = cycleTimer();
-    deskPos = cycleTime;
+    deskPosInMilli = cycleTime;
     Serial.print("CycleTime in setup is ");
     Serial.println(cycleTime); 
-    updateCycleTimer(timedCycle);
-        statusCheck(3);
+    updateCycleTimer(cycleTime);
     deskPosP = 100; /* set position % as 100% */
-  }
-    
+    statusCheck(3);
+  }    
+  
 }
 
 void resetEEPROM(){
@@ -30,7 +40,7 @@ void resetEEPROM(){
 }
 
 void serialDebug (){
-  int storedMagic, storedDeskStatus, storedCycleTime, storedDeskPos;
+  int storedDeskStatus, storedCycleTime, storedDeskPosInMilli;
   int f;
   /*char w[6];
   w[0] = '2';
@@ -44,15 +54,15 @@ void serialDebug (){
   EEPROM.get(0, storedMagic);
   EEPROM.get(10, storedDeskStatus);
   EEPROM.get(20, storedCycleTime);
-  EEPROM.get(30, storedDeskPos);
+  EEPROM.get(30, storedDeskPosInMilli);
   Serial.print("storedMagic  from mem 0 is");
   Serial.println(storedMagic);
   Serial.print("storedDeskStatus from mem 10 is");
   Serial.println(storedDeskStatus);
   Serial.print("storedCycleTime from mem 20 is");
   Serial.println(storedCycleTime); 
-  Serial.print("deskPos from mem 30 is");
-  Serial.println(deskPos); 
+  Serial.print("deskPosInMilli from mem 30 is");
+  Serial.println(deskPosInMilli); 
 
   Serial.println(" ------");
 
@@ -121,8 +131,9 @@ int cycleTimer(){
     Serial.println(" ");
     EEPROM.put(0,magicChar);
     EEPROM.put(20,cycTime);
-    EEPROM.put(30,deskPos);
+    EEPROM.put(30,deskPosInMilli);
     EEPROM.end(); 
   }
+
 
 

@@ -8,53 +8,89 @@
 #include <ESPmDNS.h>
 #include "credentials.h"
 
-/* const char* brokerUser = "gengisville";
- *  const char* brokerPass = "gengisville";
+/* const char* brokerUser = "";
+ *  const char* brokerPass = "";
  */
-#define EEPROM_SIZE 1024
+#define EEPROM_SIZE 64
+; 
 
+int maxMotorTime = 5500;                     /* Maually set  max bot to top cycle time for safet. Set as millis.*/
+int deskTimer = 0;                            /* MQTT incoming time */
+char magicChar[2] = "V", storedMagic[2];                      /* magic number to check if EEPROM numbers have been stored*/
+int safeTopTime = (int)maxMotorTime *.9;      /* Set to reverse after hitting stop - default 10%*/
+int safeBotTime = (int)maxMotorTime *.1;      /* Set to reverse after hitting stop - default 10%*/
  
 const char* broker = "192.168.20.200";
-/*const char* outTopic = "/Desk/out";*/
 const char* outStatus = "/Desk/status";
 const char* outPerc = "/Desk/perc";
 const char* outDebug = "/Desk/debug";
-const char* inTopic = "/Desk/cmf";
-char deskStatus[2] = "8";
+const char* inTopic = "/Desk/cmd";
 
+                                              /* To be implemented , top endstop, button controls
+stateTopS = HIGH*/
 const byte buttonPinUp = 4; 
 const byte buttonPinDown = 15; 
-byte buttonStateUp = 0;   
-byte buttonStateDown = 0; 
- 
-const byte motor1Pin1 = 16; 
+/*byte buttonStateUp = 0;   
+byte buttonStateDown = 0
+*/
+
+char deskStatus[2] = "8"; 
+
+const byte motor1Pin1 = 16;                   /* Motor Controller Pins*/
 const byte motor1Pin2 = 17; 
 const byte motor1Pin3 = 5; 
 const byte motor1Pin4 = 18;  
 
-const byte botLimitSwitchS = 19; 
+const byte botLimitSwitchS = 19;              /* Bot End Stop Pin*/
 
 char mqttIn[8];
 char mqttOut[8];
-byte stateBotS = HIGH, lastBotS = HIGH, stateTopS = HIGH , botLimitSwitchSError = 0;
-char messages[50];
-byte deskDirection = 0, errorStatus = 0, maxDeskTime = 10 ;
-int count = 0, timeStore,debugCyc, debounceDelay = 500;
-int maxDeskTimer = 40000; /* Maximum bottom to top cycle time. Sert as Seconds. Set this manually for safety*/
-int deskTimer = 0; /* MQTT incoming time */
-int currentTime, startTime, endTime, cycleTime, deskPos, deskPosP;
-int maxMotorTime = 7500; /* Maually set  max bot to top cycle time*/
-int safeTopTime = (int)maxMotorTime *.9;
-int safeBotTime = (int)maxMotorTime *.1;
-char magicChar[2] = "X";
+byte stateBotS = HIGH, lastBotS = HIGH, botLimitSwitchSError = 0;
+byte deskDirection = 0, errorStatus = 0;
 
+int startTime, cycleTime, deskPosInMilli, deskPosP;
+
+void eepStatusSave (char sr = 'r', char Status[2] = deskStatus, int PosInMilli = deskPosInMilli, int Perc = deskPosP, int cycTime = cycleTime) {
+  EEPROM.begin(EEPROM_SIZE);
+  char temp[10];
+  Serial.print("sr is ");
+  Serial.println(sr);
+  if(sr == 's'){
+    Serial.println(" eepStatsSave ---- status, PosinMilli, Perc");
+    Serial.println(Status);
+    Serial.println(PosInMilli);
+    Serial.println(Perc);
+    EEPROM.put(10,Status[0]);
+    EEPROM.put(30,PosInMilli);
+    EEPROM.put(40,Perc);
+  } else if(sr == 'r') {
+  EEPROM.get(0, storedMagic);
+  EEPROM.get(10, deskStatus[0]);
+  EEPROM.get(20, cycleTime);
+  EEPROM.get(30, deskPosInMilli);
+  EEPROM.get(40, deskPosP);
+  Serial.print("magicInMem  from mem 0 is ");
+  Serial.println(storedMagic);
+  Serial.print("Deskstatus from mem 10 is ");
+  Serial.println(deskStatus[0]);
+  Serial.print("cycTime from mem 20 is ");
+  Serial.println(cycleTime); 
+  Serial.print("deskPosInMilli from mem 30 is ");
+  Serial.println(cycleTime); 
+  Serial.print("deskPosP from mem 40 is ");
+  Serial.println(deskPosP); 
+  } else {
+  Serial.println("  ---- eepStatsSave not s or r");
+  }
+  EEPROM.end();
+ 
+}
 
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 
 void setup(){
-  int cycTime,magicInMem;
   // Setup needed for OTA
   Serial.begin(115200);
   Serial.println("Booting");
@@ -107,18 +143,8 @@ void setup(){
   client.setCallback(callback);
   /*setupWifi();*/
   EEPROM.begin(EEPROM_SIZE);
-  EEPROM.get(10, deskStatus);
-  EEPROM.get(0, magicInMem);
-  EEPROM.get(20, cycTime);
-  EEPROM.get(30, deskPos);
-  Serial.print("Deskstatus from mem 10 is ");
-  Serial.println(deskStatus);
-  Serial.print("magicInMem  from mem 0 is ");
-  Serial.println(magicInMem);
-  Serial.print("cycTime from mem 20 is ");
-  Serial.println(cycTime); 
-  Serial.print("deskPos from mem 30 is ");
-  Serial.println(cycTime); 
+  Serial.print("first read");
+  eepStatusSave('r'); 
   reconnect();
   setupDesk();
  
@@ -134,5 +160,6 @@ void loop() {
     reconnect();
   }
 }
+
 
 
