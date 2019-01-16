@@ -14,9 +14,9 @@
 #define EEPROM_SIZE 64
 ; 
 
-int maxMotorTime = 5500;                     /* Maually set  max bot to top cycle time for safet. Set as millis.*/
+int maxMotorTime = 32000;                     /* Maually set  max bot to top cycle time for safet. Set as millis.*/
 int deskTimer = 0;                            /* MQTT incoming time */
-char magicChar[2] = "V", storedMagic[2];                      /* magic number to check if EEPROM numbers have been stored*/
+char magicChar[2] = "Q", storedMagic[2];                      /* magic number to check if EEPROM numbers have been stored*/
 int safeTopTime = (int)maxMotorTime *.9;      /* Set to reverse after hitting stop - default 10%*/
 int safeBotTime = (int)maxMotorTime *.1;      /* Set to reverse after hitting stop - default 10%*/
  
@@ -26,15 +26,19 @@ const char* outPerc = "/Desk/perc";
 const char* outDebug = "/Desk/debug";
 const char* inTopic = "/Desk/cmd";
 
+const int eepMagicChar = 0, eepDeskStatus = 10, eepCycleTime = 20, eepDeskPosinMilli = 30, eepDeskPosP = 40; /* Eeprom memory storage locations */
+                                              
                                               /* To be implemented , top endstop, button controls
 stateTopS = HIGH*/
 const byte buttonPinUp = 4; 
-const byte buttonPinDown = 15; 
+const int buttonPinDown = 15; 
 /*byte buttonStateUp = 0;   
 byte buttonStateDown = 0
 */
 
 char deskStatus[2] = "8"; 
+char outPayload[50];
+char debugPayload[100];
 
 const byte motor1Pin1 = 16;                   /* Motor Controller Pins*/
 const byte motor1Pin2 = 17; 
@@ -50,45 +54,41 @@ byte deskDirection = 0, errorStatus = 0;
 
 int startTime, cycleTime, deskPosInMilli, deskPosP;
 
-void eepStatusSave (char sr = 'r', char Status[2] = deskStatus, int PosInMilli = deskPosInMilli, int Perc = deskPosP, int cycTime = cycleTime) {
-  EEPROM.begin(EEPROM_SIZE);
-  char temp[10];
-  Serial.print("sr is ");
-  Serial.println(sr);
-  if(sr == 's'){
-    Serial.println(" eepStatsSave ---- status, PosinMilli, Perc");
-    Serial.println(Status);
-    Serial.println(PosInMilli);
-    Serial.println(Perc);
-    EEPROM.put(10,Status[0]);
-    EEPROM.put(30,PosInMilli);
-    EEPROM.put(40,Perc);
-  } else if(sr == 'r') {
-  EEPROM.get(0, storedMagic);
-  EEPROM.get(10, deskStatus[0]);
-  EEPROM.get(20, cycleTime);
-  EEPROM.get(30, deskPosInMilli);
-  EEPROM.get(40, deskPosP);
-  Serial.print("magicInMem  from mem 0 is ");
-  Serial.println(storedMagic);
-  Serial.print("Deskstatus from mem 10 is ");
-  Serial.println(deskStatus[0]);
-  Serial.print("cycTime from mem 20 is ");
-  Serial.println(cycleTime); 
-  Serial.print("deskPosInMilli from mem 30 is ");
-  Serial.println(cycleTime); 
-  Serial.print("deskPosP from mem 40 is ");
-  Serial.println(deskPosP); 
-  } else {
-  Serial.println("  ---- eepStatsSave not s or r");
-  }
-  EEPROM.end();
- 
-}
+
 
 
 WiFiClient espClient;
 PubSubClient client(espClient);
+
+void eepStatusSave (char sr = 'r', char message[30] = "Happy Days", char magic[2] = magicChar, char Status[2] = deskStatus, int cycTime = cycleTime, int PosInMilli = deskPosInMilli, int Perc = deskPosP) {
+  EEPROM.begin(EEPROM_SIZE);
+  
+  if(sr == 's'){
+    EEPROM.put(eepMagicChar, magic[0]);
+    EEPROM.put(eepDeskStatus,Status[0]);
+    EEPROM.put(eepCycleTime, cycTime);
+    EEPROM.put(eepDeskPosinMilli ,PosInMilli);
+    EEPROM.put(eepDeskPosP,Perc);
+    client.publish(outStatus, deskStatus);
+    sprintf(outPayload, "%d", deskPosP);
+    client.publish(outPerc, outPayload);
+    sprintf(debugPayload, "Magic:%c deskStatus:%c cycleTime:%d deskPosinMilli:%d deskPosP: %d Error Message: %s",storedMagic[0], Status[0], cycTime, PosInMilli, Perc, message );
+    Serial.println(debugPayload);
+    client.publish(outDebug, debugPayload);
+  } else {
+  EEPROM.get(eepMagicChar, storedMagic);
+  EEPROM.get(eepDeskStatus, deskStatus[0]);
+  EEPROM.get(eepCycleTime, cycleTime);
+  EEPROM.get(eepDeskPosinMilli, deskPosInMilli);
+  EEPROM.get(eepDeskPosP, deskPosP);
+  sprintf(debugPayload, "Magic:%c deskStatus:%c cycleTime:%d deskPosinMilli:%d deskPosP: %d Error Message:\" %s\"",storedMagic[0], Status[0], cycTime, PosInMilli, Perc, message );
+  client.publish(outDebug, debugPayload);
+  } /*else {
+  Serial.println("  FUCK ---- eepStatsSave not s or r");
+  }*/
+  EEPROM.end();
+ 
+}
 
 void setup(){
   // Setup needed for OTA
@@ -143,8 +143,8 @@ void setup(){
   client.setCallback(callback);
   /*setupWifi();*/
   EEPROM.begin(EEPROM_SIZE);
-  Serial.print("first read");
-  eepStatusSave('r'); 
+  /*Serial.print("first read");
+  eepStatusSave('r'); */
   reconnect();
   setupDesk();
  
