@@ -6,7 +6,7 @@ void setupDesk(){
   EEPROM.get(0,deskPrev);
   if (deskPrev == magicChar[0]) {
     Serial.println("magicchar match");
-    eepStatusSave('r');
+    eepStatusSave();
   } else if (stateBotS == HIGH) {
     statusCheck(1);
   } else {
@@ -109,3 +109,5 @@ int cycleTimer(){
     EEPROM.put(30,deskPosInMilli);
     EEPROM.end(); 
   }
+
+

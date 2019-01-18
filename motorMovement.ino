@@ -1,3 +1,4 @@
+
 void motorMove (char motorMove[]) {
   if(motorMove == "stop") {
     digitalWrite(motor1Pin1, LOW);
@@ -23,6 +24,9 @@ void motorMove (char motorMove[]) {
   
 }
 
+
+
+
 void motor(char message[], int motorTimer = maxMotorTime) {
   
   stateBotS= digitalRead(botLimitSwitchS);
@@ -32,20 +36,28 @@ void motor(char message[], int motorTimer = maxMotorTime) {
   } else if (message == "up"){
     startTime = millis();
     motorMove("up"); 
-    while (((millis() - startTime) < motorTimer) && deskPosInMilli < safeTopTime ) {
+   /* while (((millis() - startTime) < motorTimer) && deskPosInMilli < safeTopTime ) {
       stateBotS= digitalRead(botLimitSwitchS);      
-      deskPosPercL("up");
-    }
+      /*deskPosPercL("up");*/
+         Serial.print("motor up percTarget = " );
+        Serial.println(percTarget);
+      movePerc(percTarget);
+         
+   /* }*/
     motorMove("stop");
     deskPosInMilli += (millis() - startTime);
     statusCheck(1);
   } else if (message == "down") {
     startTime = millis();
     motorMove("down"); 
-    while (((millis() - startTime) < motorTimer) && stateBotS == LOW ) {
+   /* while (((millis() - startTime) < motorTimer) && stateBotS == LOW ) {
       stateBotS= digitalRead(botLimitSwitchS);
-      deskPosPercL("dn");
-    }
+      /*deskPosPercL("dn");*/
+      Serial.print("motor down percTarget = " );
+        Serial.println(percTarget);
+      movePerc(percTarget);
+      
+    /*}*/
     motorMove("stop");
     deskPosInMilli -= (millis() - startTime);
     statusCheck(2);
@@ -96,4 +108,4 @@ void motor(char message[], int motorTimer = maxMotorTime) {
     }
 }
 
-
+ 
