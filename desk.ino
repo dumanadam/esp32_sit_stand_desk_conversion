@@ -19,11 +19,11 @@
 
 #define EEPROM_SIZE 64                        /* EEPROM size put aside for ESP32, adjust if you add any additional EEPROM storage paramaters*/ 
 
-int maxMotorTime = 32000;                     /* Maually set  max bot to top cycle time for safety. Set as millis, 1000 = 1 sec*/
+int maxMotorTime = 34000;                     /* Maually set  max bot to top cycle time for safety. Set as millis, 1000 = 1 sec*/
 int deskTimer = 0;                            /* MQTT incoming time */
-char magicChar[2] = "Q";                      /* magic charachter to check if EEPROM numbers have been stored before last shutdown, can be change to any character of your choice*/
-int safeTopTime = (int)maxMotorTime *.9;      /* Set a buffer from the top - default 10%*/
-int safeBotTime = (int)maxMotorTime *.1;      /* Set a buffer from the bot  - default 10%*/
+char magicChar[2] = "P";                      /* magic charachter to check if EEPROM numbers have been stored before last shutdown, can be change to any character of your choice*/
+int safeTopTime = (int)maxMotorTime;          /* Set a buffer from the top  - Optional*/
+int safeBotTime = (int)maxMotorTime * .05;          /* Set a buffer from the bot - Optional */
 const byte motor1Pin1 = 16;                   /* Motor Controller Pin 1*/
 const byte motor1Pin2 = 17;                   /* Motor Controller Pin 2*/
 const byte motor1Pin3 = 5;                    /* Motor Controller Pin 3*/
@@ -52,7 +52,6 @@ byte stateBotS = HIGH, botLimitSwitchSError = 0, deskDirection = 0, errorStatus 
 int startTime, cycleTime, deskPosInMilli, deskPosP, percTarget;
 const char* broker = brokerIP;
 
- void movePerc(int recPerc);
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -71,24 +70,22 @@ void eepStatusSave (char sr = 'r', char message[30] = "Happy Days", char magic[2
     client.publish(outStatus, deskStatus);
     sprintf(outPayload, "%d", deskPosP);
     client.publish(outPerc, outPayload);
-    sprintf(debugPayload, "Magic:%c deskStatus:%c cycleTime:%d deskPosinMilli:%d deskPosP: %d Error Message: %s",storedMagic[0], Status[0], cycTime, PosInMilli, Perc, message );
+    sprintf(debugPayload, "MagicS:%c deskStatus:%c cycleTime:%d deskPosinMilli:%d deskPosP: %d Error Message: %s",storedMagic[0], Status[0], cycTime, PosInMilli, Perc, message );
     Serial.println(debugPayload);
     client.publish(outDebug, debugPayload);
   } else {
-  Serial.print("else in save");  
+  Serial.println("else in save");  
   EEPROM.get(eepMagicChar, storedMagic);
   EEPROM.get(eepDeskStatus, deskStatus[0]);
   EEPROM.get(eepCycleTime, cycleTime);
   EEPROM.get(eepDeskPosinMilli, deskPosInMilli);
   EEPROM.get(eepDeskPosP, deskPosP);
-  sprintf(debugPayload, "Magic:%c deskStatus:%c cycleTime:%d deskPosinMilli:%d deskPosP: %d Error Message:\" %s\"",storedMagic[0], Status[0], cycTime, PosInMilli, Perc, message );
+  sprintf(debugPayload, "MagicR:%c deskStatus:%c cycleTime:%d deskPosinMilli:%d deskPosP: %d Error Message:\" %s\"",storedMagic[0], Status[0], cycTime, PosInMilli, Perc, message );
   client.publish(outDebug, debugPayload);
   client.publish(outStatus, deskStatus);
   sprintf(outPayload, "%d", deskPosP);
   client.publish(outPerc, outPayload);
-  } /*else {
-  Serial.println("  FUCK ---- eepStatsSave not s or r");
-  }*/
+  } 
   EEPROM.end();
  
 }
@@ -96,6 +93,7 @@ void eepStatusSave (char sr = 'r', char message[30] = "Happy Days", char magic[2
 
 
 void setup(){
+// Setup needed for OTA
   Serial.begin(115200);
   Serial.println("Booting");
   WiFi.mode(WIFI_STA);
@@ -105,52 +103,37 @@ void setup(){
     delay(5000);
     ESP.restart();
   }
-
-  // Port defaults to 3232
-  // ArduinoOTA.setPort(3232);
-
-  // Hostname defaults to esp3232-[MAC]
-  // ArduinoOTA.setHostname("myesp32");
-
-  // No authentication by default
-  // ArduinoOTA.setPassword("admin");
-
-  // Password can be set with it's md5 value as well
-  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
+  // Port defaults to 3232                            // ArduinoOTA.setPort(3232);
+  // Hostname defaults to esp3232-[MAC]               // ArduinoOTA.setHostname("myesp32");
+  // No authentication by default                     // ArduinoOTA.setPassword("admin");
+  // Password can be set with it's md5 value as well  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
   // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
-
-  ArduinoOTA
-    .onStart([]() {
-      String type;
-      if (ArduinoOTA.getCommand() == U_FLASH)
-        type = "sketch";
-      else // U_SPIFFS
-        type = "filesystem";
-
-      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-      Serial.println("Start updating " + type);
-    })
-    .onEnd([]() {
-      Serial.println("\nEnd");
-    })
-    .onProgress([](unsigned int progress, unsigned int total) {
-      Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-    })
-    .onError([](ota_error_t error) {
-      Serial.printf("Error[%u]: ", error);
-      if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-      else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-      else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-      else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-      else if (error == OTA_END_ERROR) Serial.println("End Failed");
-    });
-
+  ArduinoOTA.onStart([]() {
+    String type;
+    if (ArduinoOTA.getCommand() == U_FLASH)
+      type = "sketch";
+    else // U_SPIFFS
+      type = "filesystem";
+    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+    Serial.println("Start updating " + type);
+  });
+  ArduinoOTA.onEnd([]() { Serial.println("\nEnd"); });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR)         Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR)   Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR)     Serial.println("End Failed");
+  });
   ArduinoOTA.begin();
-
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
- //  My setup onwards
+//  My setup onwards
   pinMode(buttonPinUp, INPUT_PULLUP);
   pinMode(buttonPinDown, INPUT_PULLUP); 
   pinMode(motor1Pin1, OUTPUT);
@@ -158,16 +141,11 @@ void setup(){
   pinMode(motor1Pin3, OUTPUT);
   pinMode(motor1Pin4, OUTPUT);
   pinMode(botLimitSwitchS, INPUT);
-   client.setServer(broker, 1883);
+  client.setServer(broker, 1883);
   client.setCallback(callback);
-  /*setupWifi();*/
   EEPROM.begin(EEPROM_SIZE);
-  /*Serial.print("first read");
-  eepStatusSave('r'); */
   reconnect();
   setupDesk();
- 
-
 }
 
 void loop() {

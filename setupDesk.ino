@@ -8,25 +8,24 @@ void setupDesk(){
     Serial.println("magicchar match");
     eepStatusSave();
   } else if (stateBotS == HIGH) {
-    statusCheck(1);
+    eepStatusSave('r', "Bot End Stop Error");
   } else {
     Serial.print("setup cycle");
     cycleTime = cycleTimer();
     deskPosInMilli = cycleTime;
-    
-   /* updateCycleTimer(cycleTime);
-   eepStatusSave('s', "Initial data save");  */
     deskPosP = 100; /* set position % as 100% */
-    
     statusCheck(3);
   }    
-  
 }
 
 void resetEEPROM(){
   EEPROM.begin(EEPROM_SIZE);
   EEPROM.write(0,255);
   EEPROM.end();
+  Serial.println("Reset EEPROM, rebooting in 3 seconds");
+  eepStatusSave('r', "Reset EEPROM, rebooting in 3 seconds");
+  delay(3000);
+  ESP.restart();
 }
 
 void serialDebug (){
@@ -98,7 +97,7 @@ int cycleTimer(){
     }
     motorMove("stop");
     cycleT = millis();
-    diff = (cycleT - startT); /*cycle time from bot to top based on safeTopTime*/
+    diff = (cycleT - startT)-1000; /*cycle time from bot to top based on safeTopTime*/
     return diff;
   }
 
